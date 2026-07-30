@@ -29,10 +29,15 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; }
 
-.header { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); color: white; padding: 20px 32px; }
+.header { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); color: white; padding: 20px 32px; position: relative; }
 .header h1 { font-size: 1.5rem; font-weight: 700; }
 .header .sub { font-size: 0.85rem; opacity: 0.85; margin-top: 4px; }
 .header .meta-row { display: flex; gap: 24px; margin-top: 12px; font-size: 0.8rem; opacity: 0.8; flex-wrap: wrap; }
+.countdown-box { position: absolute; top: 20px; right: 32px; text-align: right; }
+.countdown-box .cd-label { font-size: 0.7rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.countdown-box .cd-value { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #38bdf8; }
+.countdown-box .cd-sub { font-size: 0.7rem; opacity: 0.6; margin-top: 2px; }
+@media (max-width: 768px) { .countdown-box { position: static; margin-top: 12px; text-align: left; } }
 
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; padding: 20px 32px; }
 .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
@@ -57,9 +62,11 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); line
 .filter-bar input, .filter-bar select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.82rem; }
 
 table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-th { background: #f1f5f9; color: var(--text); font-weight: 600; padding: 10px 12px; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; }
-td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { background: #f1f5f9; color: var(--text); font-weight: 600; padding: 10px 12px; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; vertical-align: middle; }
+td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 tr:hover { background: #f8fafc; }
+th.number, td.number { text-align: right; }
+th.text-center, td.text-center { text-align: center; }
 
 .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; }
 .badge-a { background: var(--primary-light); color: var(--primary); }
@@ -119,6 +126,11 @@ tr:hover { background: #f8fafc; }
 <body>
 
 <div class="header">
+  <div class="countdown-box">
+    <div class="cd-label">Next Update In</div>
+    <div class="cd-value" id="countdownTimer">--:--:--</div>
+    <div class="cd-sub" id="countdownTarget">Loading...</div>
+  </div>
   <h1>Global TBR Tyre Market Intelligence Dashboard</h1>
   <div class="sub">全球TBR轮胎市场情报工作台 | Prinx Chengshan (浦林成山)</div>
   <div class="meta-row">
@@ -241,7 +253,7 @@ function renderItma() {
 
   // ---- Yearly Trend Table ----
   html += '<div class="card"><h2>TBR Import Trend by Source 年度进口趋势 (EU+UK, units)</h2>';
-  html += '<table><thead><tr><th>Year</th><th>Total</th><th>Thailand</th><th>TH%</th><th>Vietnam</th><th>VN%</th><th>China</th><th>CN%</th><th>TH+VN %</th></tr></thead><tbody>';
+  html += '<table><thead><tr><th class="text-center">Year</th><th class="number">Total</th><th class="number">Thailand</th><th class="number">TH%</th><th class="number">Vietnam</th><th class="number">VN%</th><th class="number">China</th><th class="number">CN%</th><th class="number">TH+VN %</th></tr></thead><tbody>';
   ['2023','2024','2025'].forEach(function(yr) {
     var s = summary[yr];
     if (!s) return;
@@ -265,7 +277,7 @@ function renderItma() {
   // ---- Top 10 Import Countries Q1 2026 ----
   var countries = Object.entries(top10);
   html += '<div class="card"><h2>Top 10 Import Countries Q1 2026 进口前十国家</h2>';
-  html += '<table><thead><tr><th>#</th><th>Country</th><th>Total Q1</th><th>Thailand</th><th>TH%</th><th>Vietnam</th><th>VN%</th><th>China</th><th>CN%</th></tr></thead><tbody>';
+  html += '<table><thead><tr><th class="text-center">#</th><th>Country</th><th class="number">Total Q1</th><th class="number">Thailand</th><th class="number">TH%</th><th class="number">Vietnam</th><th class="number">VN%</th><th class="number">China</th><th class="number">CN%</th></tr></thead><tbody>';
   countries.forEach(function(entry, i) {
     var name = entry[0], d = entry[1];
     html += '<tr>';
@@ -1347,6 +1359,48 @@ function switchTab(tabName) {
     content.innerHTML = renderers[tabName]();
   }
 }
+
+// ===== COUNTDOWN TO NEXT UPDATE =====
+function updateCountdown() {
+  var now = new Date();
+  // Next update: 07:30 CST (UTC+8) daily
+  var target = new Date(now.getTime());
+  // Convert current time to CST (UTC+8)
+  var utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  var cstNow = new Date(utcMs + 8 * 3600000);
+  var cstHour = cstNow.getHours();
+  var cstMin = cstNow.getMinutes();
+
+  // Set target to today 07:30 CST
+  var cstTarget = new Date(cstNow);
+  cstTarget.setHours(7, 30, 0, 0);
+
+  // If already past 07:30 CST today, target is tomorrow
+  if (cstTarget <= cstNow) {
+    cstTarget.setDate(cstTarget.getDate() + 1);
+  }
+
+  // Calculate diff in ms
+  var diffMs = cstTarget - cstNow;
+  var diffH = Math.floor(diffMs / 3600000);
+  var diffM = Math.floor((diffMs % 3600000) / 60000);
+  var diffS = Math.floor((diffMs % 60000) / 1000);
+
+  var pad = function(n) { return (n < 10 ? '0' : '') + n; };
+  var timerEl = document.getElementById('countdownTimer');
+  var targetEl = document.getElementById('countdownTarget');
+  if (timerEl) {
+    timerEl.textContent = pad(diffH) + ':' + pad(diffM) + ':' + pad(diffS);
+  }
+  if (targetEl) {
+    var targetCST = cstTarget;
+    var m = targetCST.getMonth() + 1;
+    var d = targetCST.getDate();
+    targetEl.textContent = 'Next: ' + targetCST.getFullYear() + '-' + pad(m) + '-' + pad(d) + ' 07:30 CST';
+  }
+}
+updateCountdown();
+setInterval(updateCountdown, 1000);
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', function() {
