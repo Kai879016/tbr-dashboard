@@ -62,7 +62,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); line
 .filter-bar input, .filter-bar select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.82rem; }
 
 table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-th { background: #f1f5f9; color: var(--text); font-weight: 600; padding: 10px 12px; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; vertical-align: middle; }
+th { background: #f1f5f9; color: var(--text); font-weight: 600; padding: 10px 12px; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; vertical-align: middle; position: sticky; top: 0; z-index: 10; background-clip: padding-box; }
 td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 tr:hover { background: #f8fafc; }
 th.number, td.number { text-align: right; }
@@ -326,8 +326,21 @@ function renderSummary() {
 
   var h = '<div class="card"><h2>Executive Summary | 管理层摘要</h2>';
 
+  // Filter events to last 7 days and sort newest first
+  var cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  cutoff.setHours(0, 0, 0, 0);
+  events = events.filter(function(e) {
+    if (!e.event_date) return false;
+    var d = new Date(e.event_date);
+    return !isNaN(d) && d >= cutoff;
+  }).sort(function(a, b) {
+    var da = new Date(a.event_date), db = new Date(b.event_date);
+    return db - da;
+  });
+
   if (events.length > 0) {
-    h += '<h3>Key Market Events | 重大市场事件</h3>';
+    h += '<h3>Key Market Events | 重大市场事件 <span style="font-size:0.75rem;font-weight:400;color:var(--text-secondary);">(Last 7 days | 近7天)</span></h3>';
     events.forEach(function(e) {
       h += '<div class="event-item">';
       var titleText = priBadge(e.priority || '') + ' ' + (e.title_en || e.title_cn || '');
@@ -345,7 +358,7 @@ function renderSummary() {
   // Top markets sorted by tier then capacity
   h += '<div class="card"><h3>Top Markets by Tier & Estimated TBR Capacity | 主要市场容量排名</h3>';
   h += '<p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:10px">Markets are sorted A-tier first, then B/C/D, within each tier by estimated TBR capacity. | A级市场优先，同等级内按市场容量排序。</p>';
-  h += '<div style="overflow-x:auto"><table><thead><tr><th>Rank</th><th>Country 国家</th><th>Tier</th><th>Est. TBR Capacity (units/yr) 估算容量</th><th>GDP (B USD)</th><th>EU</th></tr></thead><tbody>';
+  h += '<div style="overflow-x:auto;max-height:70vh;overflow-y:auto;"><table><thead><tr><th>Rank</th><th>Country 国家</th><th>Tier</th><th>Est. TBR Capacity (units/yr) 估算容量</th><th>GDP (B USD)</th><th>EU</th></tr></thead><tbody>';
   var sorted = countries.slice().sort(function(a, b) {
     var order = {A:0,B:1,C:2,D:3};
     var ta = a.market_tier in order ? order[a.market_tier] : 99, tb = b.market_tier in order ? order[b.market_tier] : 99;
@@ -375,7 +388,7 @@ function renderSummary() {
       groups[key].count++;
     }
   });
-  h += '<div style="overflow-x:auto"><table><thead><tr><th>Markets 市场</th><th>Rate (%) 税率</th><th>HS Code</th><th>Countries 国家数</th><th>Notes 备注</th></tr></thead><tbody>';
+  h += '<div style="overflow-x:auto;max-height:70vh;overflow-y:auto;"><table><thead><tr><th>Markets 市场</th><th>Rate (%) 税率</th><th>HS Code</th><th>Countries 国家数</th><th>Notes 备注</th></tr></thead><tbody>';
   Object.values(groups).sort(function(a,b){return b.count - a.count;}).forEach(function(g) {
     var names = g.countries.map(function(iso){var c=(DATA.countries||[]).find(function(x){return x.iso_code===iso;}); return (FLAGS[iso]||'')+' '+(c?c.name_en:iso);}).join(', ');
     if (g.count > 5) names = 'EU Member States (' + g.count + ' countries) + others';
@@ -389,7 +402,7 @@ function renderSummary() {
 
   if (actions.length > 0) {
     h += '<div class="card"><h3>Recommended Actions | 建议行动清单</h3>';
-    h += '<div style="overflow-x:auto"><table><thead><tr><th>Priority</th><th>Action 行动</th><th>Country 国家</th><th>Dept 部门</th><th>Deadline 截止</th></tr></thead><tbody>';
+    h += '<div style="overflow-x:auto;max-height:70vh;overflow-y:auto;"><table><thead><tr><th>Priority</th><th>Action 行动</th><th>Country 国家</th><th>Dept 部门</th><th>Deadline 截止</th></tr></thead><tbody>';
     actions.slice(0, 10).forEach(function(a) {
       h += '<tr>';
       h += '<td>' + priBadge(a.priority || '') + '</td>';
@@ -417,7 +430,7 @@ function renderEurope() {
   h += '<select id="europeEU" onchange="filterEurope()"><option value="">All</option><option value="1">EU Member</option><option value="0">Non-EU</option></select>';
   h += '</div>';
 
-  h += '<div style="overflow-x:auto"><table id="europeTable"><thead><tr>';
+  h += '<div style="overflow-x:auto;max-height:70vh;overflow-y:auto;"><table id="europeTable"><thead><tr>';
   h += '<th>#</th><th>Tier</th><th>Country 国家</th><th>Region 区域</th><th>Pop (M) 人口</th><th>GDP (B USD)</th><th>TBR Cap. (units) 估算容量</th><th>EU</th><th>EUR</th>';
   h += '</tr></thead><tbody>';
 
@@ -635,7 +648,7 @@ function renderLogistics() {
     h += '</div>';
   }
 
-  h += '<div style="overflow-x:auto"><table><thead><tr><th>Origin 起运港</th><th>Destination Port 目的港</th><th>Country 国家</th><th>Container 箱型</th><th>Freight (USD) 海运费</th><th>Freight (EUR)</th><th>Transit (Days) 运输天数</th><th>Route 航线</th><th>Suez Risk 红海风险</th><th>Reliability 准班率</th><th>Source 来源</th></tr></thead><tbody>';
+  h += '<div style="overflow-x:auto;max-height:70vh;overflow-y:auto;"><table><thead><tr><th>Origin 起运港</th><th>Destination Port 目的港</th><th>Country 国家</th><th>Container 箱型</th><th>Freight (USD) 海运费</th><th>Freight (EUR)</th><th>Transit (Days) 运输天数</th><th>Route 航线</th><th>Suez Risk 红海风险</th><th>Reliability 准班率</th><th>Source 来源</th></tr></thead><tbody>';
 
   logistics.forEach(function(l) {
     h += '<tr>';
@@ -747,7 +760,7 @@ function renderPrices() {
   };
 
   // Table view
-  h += '<div id="priceTableView" style="overflow-x:auto"><table id="priceTable"><thead><tr>';
+  h += '<div id="priceTableView" style="overflow-x:auto;max-height:70vh;overflow-y:auto;"><table id="priceTable"><thead><tr>';
   h += '<th>Country 国家</th><th>Brand 品牌</th><th>Spec 规格</th><th>Pattern 花纹</th><th>Application 用途</th><th>Tier 等级</th><th>Price (EUR) 欧元价</th><th>Source 来源</th><th>Notes 备注</th>';
   h += '</tr></thead><tbody>';
 
@@ -838,7 +851,7 @@ function renderPrices() {
       matrix[p.spec][p.brand] = {price: p.price_eur, pattern: p.pattern, tier: p.tier, isOwn: window._ownBrands.indexOf(p.brand) !== -1 };
     });
 
-    var hh = '<div style="overflow-x:auto"><table class="compare-matrix"><thead><tr><th>Spec 规格</th>';
+    var hh = '<div style="overflow-x:auto;max-height:70vh;overflow-y:auto;"><table class="compare-matrix"><thead><tr><th>Spec 规格</th>';
     allBrands.forEach(function(b){
       var own = window._ownBrands.indexOf(b) !== -1;
       hh += '<th style="' + (own ? 'color:var(--accent)' : '') + '">' + b + '</th>';
@@ -908,7 +921,7 @@ function renderCompetitors() {
   h += '<p style="color:var(--text-secondary);margin-bottom:12px">Key TBR tyre brands active in the European market — profiles and recent intelligence. | 欧洲市场主要TBR轮胎品牌——概况及最新情报。</p>';
 
   h += '<h3>Brand Profiles | 品牌概况</h3>';
-  h += '<div style="overflow-x:auto"><table><thead><tr><th>Brand 品牌</th><th>中文</th><th>Tier 等级</th><th>Profile 描述</th></tr></thead><tbody>';
+  h += '<div style="overflow-x:auto;max-height:70vh;overflow-y:auto;"><table><thead><tr><th>Brand 品牌</th><th>中文</th><th>Tier 等级</th><th>Profile 描述</th></tr></thead><tbody>';
   profiles.forEach(function(c) {
     h += '<tr>';
     h += '<td><strong>' + (c.brand || '--') + '</strong></td>';
@@ -980,7 +993,7 @@ function renderFxMaterials() {
   var rmHist = DATA.raw_material_history || [];
 
   var h = '<div class="card"><h2>Exchange Rates | 汇率</h2>';
-  h += '<div style="overflow-x:auto"><table><thead><tr><th>Currency Pair 货币对</th><th>Rate 汇率</th><th>Change (%) 变化</th><th>Date 日期</th><th>Source 来源</th></tr></thead><tbody>';
+  h += '<div style="overflow-x:auto;max-height:70vh;overflow-y:auto;"><table><thead><tr><th>Currency Pair 货币对</th><th>Rate 汇率</th><th>Change (%) 变化</th><th>Date 日期</th><th>Source 来源</th></tr></thead><tbody>';
   fx.forEach(function(f) {
     h += '<tr><td><strong>' + (f.currency_pair || '--') + '</strong></td>';
     h += '<td class="number">' + (f.rate != null ? f.rate.toFixed(4) : '--') + '</td>';
@@ -991,7 +1004,7 @@ function renderFxMaterials() {
   h += '</tbody></table></div></div>';
 
   h += '<div class="card"><h2>Raw Materials | 原材料</h2>';
-  h += '<div style="overflow-x:auto"><table><thead><tr><th>Material 原材料</th><th>Chinese 中文</th><th>Price 价格</th><th>Unit 单位</th><th>Change (%) 变化</th><th>Cost Impact 成本影响</th><th>Date 日期</th></tr></thead><tbody>';
+  h += '<div style="overflow-x:auto;max-height:70vh;overflow-y:auto;"><table><thead><tr><th>Material 原材料</th><th>Chinese 中文</th><th>Price 价格</th><th>Unit 单位</th><th>Change (%) 变化</th><th>Cost Impact 成本影响</th><th>Date 日期</th></tr></thead><tbody>';
   rm.forEach(function(r) {
     h += '<tr><td><strong>' + (r.material || '--') + '</strong></td>';
     h += '<td>' + (r.material_cn || '--') + '</td>';
@@ -1082,7 +1095,7 @@ function renderCostSalesImpact() {
   // FX impact table
   if (fxImpacts.length > 0) {
     h += '<h3 style="margin:16px 0 8px;font-size:0.95rem;">FX Impact | 汇率影响</h3>';
-    h += '<div style="overflow-x:auto"><table><thead><tr><th>Currency Pair 货币对</th><th>Change 变动</th><th>Cost Impact 成本影响</th><th>Per Tyre (USD/EUR)</th><th>Sales Impact 销售影响</th><th>Precautions 注意事项</th></tr></thead><tbody>';
+    h += '<div style="overflow-x:auto;max-height:70vh;overflow-y:auto;"><table><thead><tr><th>Currency Pair 货币对</th><th>Change 变动</th><th>Cost Impact 成本影响</th><th>Per Tyre (USD/EUR)</th><th>Sales Impact 销售影响</th><th>Precautions 注意事项</th></tr></thead><tbody>';
     fxImpacts.forEach(function(i) {
       h += '<tr>';
       h += '<td><strong>' + (i.item || '--') + '</strong></td>';
@@ -1102,7 +1115,7 @@ function renderCostSalesImpact() {
   // Raw material impact table
   if (rmImpacts.length > 0) {
     h += '<h3 style="margin:16px 0 8px;font-size:0.95rem;">Raw Material Impact | 原材料影响</h3>';
-    h += '<div style="overflow-x:auto"><table><thead><tr><th>Material 原材料</th><th>中文</th><th>Change 变动</th><th>Cost Impact 成本影响</th><th>Per Tyre (USD/EUR)</th><th>Sales Impact 销售影响</th><th>Precautions 注意事项</th></tr></thead><tbody>';
+    h += '<div style="overflow-x:auto;max-height:70vh;overflow-y:auto;"><table><thead><tr><th>Material 原材料</th><th>中文</th><th>Change 变动</th><th>Cost Impact 成本影响</th><th>Per Tyre (USD/EUR)</th><th>Sales Impact 销售影响</th><th>Precautions 注意事项</th></tr></thead><tbody>';
     rmImpacts.forEach(function(i) {
       h += '<tr>';
       h += '<td><strong>' + (i.item || '--') + '</strong></td>';
@@ -1285,7 +1298,7 @@ function simpleMarkdown(md) {
 function renderSources() {
   var sources = DATA.sources || [];
   var h = '<div class="card"><h2>Information Sources | 信息来源</h2>';
-  h += '<div style="overflow-x:auto"><table><thead><tr><th>Name 来源名称</th><th>Type 类型</th><th>URL</th><th>Reliability 可靠性</th><th>Last Accessed 最后访问</th></tr></thead><tbody>';
+  h += '<div style="overflow-x:auto;max-height:70vh;overflow-y:auto;"><table><thead><tr><th>Name 来源名称</th><th>Type 类型</th><th>URL</th><th>Reliability 可靠性</th><th>Last Accessed 最后访问</th></tr></thead><tbody>';
   sources.forEach(function(s) {
     h += '<tr><td><strong>' + (s.name || '--') + '</strong></td>';
     h += '<td>' + (s.source_type || '--') + '</td>';
